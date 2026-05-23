@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import enum
 import math
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from Flange.Traditional.Appendix_2 import Appendix2FlangeCalcs
+if TYPE_CHECKING:
+    from Flange.Traditional.Appendix_2 import Appendix2FlangeCalcs
 
 
 class Table_2_7_1:

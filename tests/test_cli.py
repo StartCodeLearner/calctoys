@@ -110,12 +110,37 @@ def test_cylinder_div2_hemi(capsys):
     assert data["P_a"] > 0
 
 
-def test_flange_appendix24_demo_reports_broken_upstream(capsys):
-    # The bundled Appendix24 module has a circular import in the rest of the
-    # codebase; the CLI should report that gracefully instead of crashing.
-    rc, _, err = _run_cli(["flange", "appendix24-demo"], capsys)
-    assert rc == 2
-    assert "Appendix24" in err
+def test_flange_appendix24_demo_runs(capsys):
+    rc, out, _ = _run_cli(["flange", "appendix24-demo", "--json"], capsys)
+    assert rc == 0
+    data = json.loads(out)
+    # Spot-check a few result keys produced by the clamped-flange assembly.
+    assert {"N_bolts", "G", "W", "hub", "clamp"} <= set(data)
+    assert data["N_bolts"] == 4
+
+
+def test_tubesheet_uhx11_json(capsys):
+    rc, out, _ = _run_cli(
+        [
+            "tubesheet", "uhx11",
+            "--r-o", "30", "--d-t", "1.0", "--t-t", "0.083",
+            "--Et", "26900000", "--E", "26900000",
+            "--St", "13400", "--S", "19000",
+            "--p", "1.25", "--A-L", "99", "--c-t", "0.5",
+            "--h", "5", "--l-tx", "5", "--pitch-type", "square", "--json",
+        ],
+        capsys,
+    )
+    assert rc == 0
+    data = json.loads(out)
+    assert data["D_o"] == pytest.approx(61.0)
+    assert 0.0 < data["E_star_ratio"] < 1.0
+
+
+def test_list_includes_tubesheet(capsys):
+    rc, out, _ = _run_cli(["list"], capsys)
+    assert rc == 0
+    assert "tubesheet uhx11" in out
 
 
 def test_cli_invokable_as_script():

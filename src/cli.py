@@ -102,6 +102,30 @@ def cmd_cylinder_div2_fs(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tubesheet_uhx11(args: argparse.Namespace) -> int:
+    from Tubesheet.UHX.UHX_11 import UHX11Params, UHX11
+    from Tubesheet.UHX._UHX_common import PitchType
+
+    params = UHX11Params(
+        radius_to_outermost_tube_hole_center=args.r_o,
+        nominal_tube_OD=args.d_t,
+        nominal_tube_wall_thickness=args.t_t,
+        modulus_of_elasticity_of_tubes_at_tubesheet_design_temperature=args.Et,
+        modulus_of_elasticity_for_tubesheet_material_at_tubesheet_design_temperature=args.E,
+        allowable_stress_of_tubes_at_tubesheet_design_temperature=args.St,
+        allowable_stress_for_tubesheet_material_at_tubesheet_design_temperature=args.S,
+        tube_pitch=args.p,
+        area_of_untubed_lanes=args.A_L,
+        tube_side_pass_partition_groove_depth=args.h_g,
+        tubesheet_corrosion_tube_side=args.c_t,
+        tubesheet_thickness=args.h,
+        expanded_depth_of_tube_in_tubesheet=args.l_tx,
+        pitch_type=PitchType[args.pitch_type.upper()],
+    )
+    _emit(UHX11(params).result, args.json)
+    return 0
+
+
 def cmd_flange_appendix24_demo(args: argparse.Namespace) -> int:
     try:
         from Flange.Clamped.Appendix24 import (
@@ -149,6 +173,7 @@ CALC_REGISTRY: list[dict[str, str]] = [
     {"command": "cylinder div2-hemi", "description": "ASME VIII-2 4.4.7.1 hemispherical head under external pressure"},
     {"command": "cylinder div2-fs", "description": "ASME VIII-2 4.4.2 buckling safety factor"},
     {"command": "flange appendix24-demo", "description": "Run the bundled Appendix 24 clamped-flange demo"},
+    {"command": "tubesheet uhx11", "description": "ASME VIII UHX-11.5.1 effective elastic properties of a perforated tubesheet"},
 ]
 
 
@@ -248,10 +273,34 @@ def build_parser() -> argparse.ArgumentParser:
     p_fl = sub.add_parser("flange", help="flange calculations")
     fl_sub = p_fl.add_subparsers(dest="flange_command", required=True, metavar="<sub>")
     p_a24 = fl_sub.add_parser(
-        "appendix24-demo", help="run the bundled Appendix 24 demo (currently broken upstream)",
+        "appendix24-demo", help="run the bundled Appendix 24 clamped-flange demo",
     )
     _add_json_flag(p_a24)
     p_a24.set_defaults(func=cmd_flange_appendix24_demo)
+
+    # tubesheet group
+    p_ts = sub.add_parser("tubesheet", help="tubesheet calculations")
+    ts_sub = p_ts.add_subparsers(dest="tubesheet_command", required=True, metavar="<sub>")
+    p_uhx11 = ts_sub.add_parser("uhx11", help="UHX-11.5.1 effective tubesheet properties")
+    p_uhx11.add_argument("--r-o", dest="r_o", type=float, required=True, help="radius to outermost tube hole center")
+    p_uhx11.add_argument("--d-t", dest="d_t", type=float, required=True, help="nominal tube OD")
+    p_uhx11.add_argument("--t-t", dest="t_t", type=float, required=True, help="nominal tube wall thickness")
+    p_uhx11.add_argument("--Et", dest="Et", type=float, required=True, help="tube modulus at design temp")
+    p_uhx11.add_argument("--E", dest="E", type=float, required=True, help="tubesheet modulus at design temp")
+    p_uhx11.add_argument("--St", dest="St", type=float, required=True, help="tube allowable stress at design temp")
+    p_uhx11.add_argument("--S", dest="S", type=float, required=True, help="tubesheet allowable stress at design temp")
+    p_uhx11.add_argument("--p", dest="p", type=float, required=True, help="tube pitch")
+    p_uhx11.add_argument("--A-L", dest="A_L", type=float, required=True, help="area of untubed lanes")
+    p_uhx11.add_argument("--h-g", dest="h_g", type=float, default=0.0, help="pass partition groove depth")
+    p_uhx11.add_argument("--c-t", dest="c_t", type=float, default=0.0, help="tubesheet corrosion, tube side")
+    p_uhx11.add_argument("--h", dest="h", type=float, required=True, help="tubesheet thickness")
+    p_uhx11.add_argument("--l-tx", dest="l_tx", type=float, required=True, help="expanded depth of tube in tubesheet")
+    p_uhx11.add_argument(
+        "--pitch-type", required=True,
+        choices=["triangle", "square", "rotated_triangle", "rotated_square"],
+    )
+    _add_json_flag(p_uhx11)
+    p_uhx11.set_defaults(func=cmd_tubesheet_uhx11)
 
     return parser
 
