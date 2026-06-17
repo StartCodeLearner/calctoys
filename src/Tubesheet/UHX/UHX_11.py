@@ -1,6 +1,6 @@
 import math
 
-from _UHX_common import PitchType
+from ._UHX_common import PitchType
 
 
 class UHX11Params:

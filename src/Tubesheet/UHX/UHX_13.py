@@ -1,5 +1,5 @@
-from Table_13_1_and_2 import Table_13_1, Table_13_2
-from _UHX_common import Configuration as cfg
+from .Table_13_1_and_2 import Table_13_1, Table_13_2
+from ._UHX_common import Configuration as cfg
 from copy import deepcopy
 import math
 
