@@ -30,6 +30,36 @@ stress thickness, `joint_efficiency_circ` to the longitudinal — matching how
 `UG27Calcs` wires `E_long`/`E_circ`. Thin-wall form; for `t > R/2` or
 `P > 0.385 S E`, UG-27 requires the thick-wall appendix (not implemented here).
 
+## VIII-1 UG-32 — formed heads & cones, internal pressure
+
+`Cylinder/Calculations/Div1/UG32_heads.py` (added to close a coverage gap;
+free functions, **validated** by `scripts/tests.py` against hand-computed
+closed-form values). US customary; thickness excludes corrosion allowance.
+
+```python
+from Cylinder.Calculations.Div1 import UG32_heads as heads
+
+# Dispatch by head type (pass only the geometry that type needs):
+heads.required_thickness(heads.HeadType.ELLIPSOIDAL, P=400, S=17500, E=1.0, D=48, h=12)
+heads.required_thickness(heads.HeadType.HEMISPHERICAL, P=400, S=17500, E=1.0, L=24)
+heads.required_thickness(heads.HeadType.TORISPHERICAL, P=400, S=17500, E=1.0, L=48, r=2.88)
+heads.required_thickness(heads.HeadType.CONICAL, P=400, S=17500, E=1.0, D=48, alpha=0.349)
+```
+
+- Required thickness: `t_hemispherical(P,S,E,L)` (UG-32(f)),
+  `t_ellipsoidal(P,S,E,D,h=,K=)` (UG-32(c)), `t_torispherical(P,S,E,L,r=,M=)`
+  (UG-32(d)), `t_conical(P,S,E,D,alpha)` (UG-32(g)).
+- MAWP at a given `t`: `P_hemispherical`, `P_ellipsoidal`, `P_torispherical`,
+  `P_conical` (same args with `t` instead of `P`).
+- Shape factors: `K_ellipsoidal(D,h)` = (1/6)[2+(D/2h)²] (=1 for a 2:1 head);
+  `M_torispherical(L,r)` = ¼[3+√(L/r)] (≈1.77 for standard F&D, L=D, r=0.06D).
+  Pass `K=`/`M=` directly to override, or `h=`/`r=` to compute them.
+- `t_conical` raises `ValueError` for a half-apex angle ≥ 30° (UG-32(g) limit;
+  use Appendix 1-5 toriconical/reinforcement above that).
+
+For external-pressure heads see the Div 2 hemispherical module below; formed
+heads under external pressure (UG-33) are a remaining gap (see SKILL.md).
+
 ## VIII-2 4.3 — cylinder/sphere/cone, internal pressure & combined
 
 `Cylinder/Calculations/Div2/Div2Cylinder_internal.py` (module of free functions)

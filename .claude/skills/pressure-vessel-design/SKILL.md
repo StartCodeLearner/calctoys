@@ -33,11 +33,19 @@ all.** This skill is the map and the harness that make them usable.
    prints a live OK/FAIL table. Trust that table over code comments.
 4. **Units are US customary throughout** unless a module says otherwise:
    length **in**, pressure/stress **psi**, force **lbf**, moment **in·lbf**,
-   angle **radians** (degrees only where a name says `_degrees`). Confirm the
-   user's inputs are in these units before calling; convert if not.
+   angle **radians** (degrees only where a name says `_degrees`). Convert and
+   sanity-check inputs with `scripts/units.py` (`to_in`, `to_psi`, `to_lbf`,
+   `to_in_lbf`, `deg2rad`, `sanity_check`) before calling — unit mismatch is
+   the most likely source of a wrong answer.
 5. **State the Code basis in every answer** — Section, Division, paragraph
    (e.g. "VIII-1 UG-27(c)(1)", "VIII-2 4.4.5"). The user is an engineer
-   producing auditable calcs.
+   producing auditable calcs. Use `scripts/report.py` (`CalcReport`) to emit an
+   inputs → intermediates → result → pass/fail → citation sheet.
+6. **Distinguish validated from unvalidated.** Calcs covered by
+   `scripts/tests.py` against hand-computed values (UG-27, UG-32 heads, VIII-2
+   4.3.3) are trustworthy. Others (notably the App. 2 flange) are dimensionally
+   correct but **not** validated against a published case — say so, and run
+   `python scripts/tests.py` after any change to `src/`.
 
 ## Workflow
 
@@ -60,6 +68,7 @@ all.** This skill is the map and the harness that make them usable.
 | Component / loading | Path under `src/` | Code basis |
 |---|---|---|
 | Cylinder, internal P, thin-wall | `Cylinder/Calculations/Div1/internal_pressure.py` | VIII-1 UG-27 |
+| Formed heads & cones, internal P (hemi/ellipsoidal/torispherical/conical) | `Cylinder/Calculations/Div1/UG32_heads.py` | VIII-1 UG-32 |
 | Cylinder/sphere/cone, internal P + combined | `Cylinder/Calculations/Div2/Div2Cylinder_internal.py` | VIII-2 4.3.3, 4.3.10 |
 | Cylinder, external P + axial/bending/shear/combined | `Cylinder/Calculations/Div2/Div2Cylinder_external.py` | VIII-2 4.4.5 / 4.4.12 |
 | Shared 4.4 buckling helpers (FS, F_ic) | `Cylinder/Calculations/Div2/Div2Part4_4_general.py` | VIII-2 4.4.2/4.4.3 |
@@ -79,10 +88,12 @@ For exact constructor signatures, method names, and per-family gotchas, read
 the reference for the family you need:
 
 - `references/cylinders-and-heads.md` — shells & heads, Div 1 and Div 2,
-  internal/external/combined; the `material_type` enum.
-- `references/flanges.md` — Appendix 2/24/Y; **circular-import gotcha**.
+  internal/external/combined; UG-32 heads; the `material_type` enum.
+- `references/flanges.md` — Appendix 2/24/Y; fixed bugs + remaining gaps.
 - `references/tubesheets.md` — UHX 11/12/13; **per-module import styles**.
 - `references/noncircular-saddles-combined.md` — App. 13, saddles, load model.
+- `references/module-index.generated.md` — full auto-generated map of every
+  module's public symbols (regenerate with `scripts/index_modules.py --write`).
 
 ## Import quirks (why scripts "don't work together")
 
@@ -105,9 +116,33 @@ the reference for the family you need:
 
 ## Scripts
 
+Harness:
 - `scripts/pv_env.py` — `setup()` path bootstrap + `python pv_env.py` smoke
   test (the ground-truth import table). Import it from any analysis script.
-- `scripts/example_cylinder.py` — runnable worked example (Div 1 UG-27 +
-  Div 2 4.3.3). The template for new calc scripts.
-- `scripts/example_flange.py` — runnable App. 2 weld-neck flange example;
-  doubles as the Flange-package regression check.
+- `scripts/units.py` — unit conversion (`to_in`, `to_psi`, `to_lbf`,
+  `to_in_lbf`, `deg2rad`) and `sanity_check(...)` magnitude guard.
+- `scripts/report.py` — `CalcReport` builder → plain-text / Markdown calc sheet.
+- `scripts/index_modules.py` — regenerate `references/module-index.generated.md`.
+- `scripts/tests.py` — validation + regression suite. **Run after any `src/`
+  change:** `python scripts/tests.py`.
+
+Worked examples (copy-me templates, each runnable):
+- `scripts/example_cylinder.py` — Div 1 UG-27 + Div 2 4.3.3 shells.
+- `scripts/example_heads.py` — UG-32 head with the full units → calc → report
+  pipeline.
+- `scripts/example_flange.py` — App. 2 weld-neck flange; also the Flange
+  regression check.
+
+## Coverage & roadmap
+
+Implemented and **validated** (tests.py): UG-27 cylinders, UG-32 formed
+heads/cones (internal P), VIII-2 4.3.3 shells. Present but **unvalidated**:
+VIII-2 4.4 external/combined, App. 2 flange (incomplete), UHX tubesheets,
+App. 13 noncircular, saddles, combined-load model — usable, verify numbers.
+
+Known gaps (not yet implemented — say so rather than improvising): formed heads
+under **external** pressure (UG-33), **nozzle/opening reinforcement**
+(UG-37/UG-40, area-replacement), and the App. 2 flange TODOs (external
+pressure, reverse/split flanges, allowable-stress checks, nut stops, material
+checks). Implement these only with a verified ASME test case added to
+`tests.py` — wrong vessel math is a safety issue.
