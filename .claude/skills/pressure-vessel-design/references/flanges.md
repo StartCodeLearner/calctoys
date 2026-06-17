@@ -2,25 +2,43 @@
 
 All paths relative to `src/`. Units: in / psi / lbf / in·lbf.
 
-## ⚠️ Import gotcha — the Flange package is broken on import
+## Import status — fixed; calc is usable but still incomplete
 
-`Flange.Traditional.Appendix_2` and `Flange.common.Div1Common` have a
-**circular import**: `Div1Common` imports `Appendix2FlangeCalcs` from
-`Appendix_2`, while `Appendix_2` imports a long list of names from
-`Div1Common`. Importing either first triggers
-`ImportError: ... partially initialized module`. `scripts/pv_env.py` lists both
-under "known-broken" and the smoke test confirms they still fail.
+The Flange package used to fail on import (a circular dependency between
+`Div1Common` and `Appendix_2`). **That is fixed** — all Flange modules now
+import cleanly, and `scripts/example_flange.py` runs a full App. 2 weld-neck
+flange end to end. The smoke test (`python scripts/pv_env.py`) lists them under
+known-good.
 
-Consequences and options:
-- You **cannot** `import` these modules as-is to run a full flange calc.
-- The formulas and tables are still valuable as a **reference**: read the file
-  and copy the specific function/table you need into a standalone script, or
-  break the cycle locally (e.g. move the `Appendix2FlangeCalcs` import in
-  `Div1Common` to a deferred/in-function import) **only if the user asks you to
-  fix it** — that is a code change, not a calc.
-- `Flange/Traditional/Appendix_2.py` itself notes the class is **incomplete**
-  (`***Incomplete.***`; TODOs for external pressure, reverse/split flanges,
-  allowable stresses). Treat results as partial and say so.
+Fixes applied (see git history for the commit):
+- **Circular import**: `Div1Common` now imports `Appendix2FlangeCalcs` only
+  under `TYPE_CHECKING` (it was used purely as a type annotation).
+- **`Table_2_7_1.__init__`**: pulled `h_o` from the parent **flange** calc
+  (`h_o = sqrt(B·g_o)`), not from `HubGeometry`, which has no `h_o` (was an
+  `AttributeError` on every hub-stress calc).
+- **`C_b`**: referenced a non-existent `Units.Metric`; now matches
+  `Units.MKS`/`Units.SI` (the enum's actual members).
+- **`B_1`**: `... or optional_flanges` (always truthy) corrected to
+  `self.attachment_sketch in optional_flanges`.
+- **`M_o_seating`**: lever arm `0.5*(C*G)` (dimensionally invalid) corrected to
+  `0.5*(C-G)` = `W·h_G`.
+- **`S_H` (operating & seating)**: operator-precedence bug — `f·M_o/L·g₁²·B`
+  computed a value with the wrong dimensions; corrected to `f·M_o/(L·g₁²·B)`.
+- **`Table_2_6.h_T`**: compared against non-existent `Table_2_5_2_Sketch.sketch_1`;
+  corrected to the `Figure2_4` members actually used for `attachment_sketch`.
+
+All of the above were applied to **both** copies (`Flange/Traditional/` and the
+self-contained `Flange/Calculations/`).
+
+### Still incomplete — verify before relying on numbers
+
+`Appendix2FlangeCalcs` is marked `***Incomplete.***` in its docstring, with
+open TODOs: **external pressure, reverse flanges, split flanges, allowable-
+stress checks, noncircular bolt pattern, nut stops, material checks**. The
+membrane/bending stress outputs (`S_H`, `S_R`, `S_T`) are now dimensionally
+correct and in a sane range, but have **not** been validated against a known
+ASME worked example. State this when you report results, and validate against a
+reference case before trusting them for design.
 
 ## Module layout
 
@@ -59,9 +77,11 @@ method name (per the class docstring).
 
 ## Recommended approach for a flange request
 
-1. Tell the user up front that the Flange modules don't import cleanly and the
-   App. 2 class is marked incomplete.
-2. If they want numbers now: read the relevant function from the file and run a
-   copied, self-contained version, citing the exact App. 2 paragraph.
-3. If they want the package fixed: that's a code task — break the circular
-   import and complete TODOs on the designated branch, with tests.
+1. Bootstrap and import normally (`from pv_env import setup; setup()`), then
+   build params as in `scripts/example_flange.py`.
+2. Report results with the App. 2 paragraph and units, and note that the calc
+   is incomplete/unvalidated (above) — recommend checking against a known case.
+3. If the user needs one of the missing features (external pressure, reverse/
+   split flanges, allowable-stress checks, etc.), that's a code task: implement
+   it on the designated branch **with a verified ASME test case**, since wrong
+   flange math is a safety issue.

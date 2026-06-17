@@ -58,13 +58,16 @@ _KNOWN_GOOD = [
     "UHX_13",            # bare imports -> import as top-level module name
     "UHX_11",            # bare imports -> import as top-level module name
     "Tubesheet.UHX.UHX_12",  # relative imports -> import via package path
+    # Flange package -- the Div1Common <-> Appendix_2 circular import is fixed.
+    "Flange.common.Div1Common",
+    "Flange.Traditional.Appendix_2",
+    "Flange.Calculations.Appendix_2",
+    "Flange.Clamped.Appendix24",
+    "Flange.MetalToMetal.AppendixY",
 ]
 
 # Modules known to fail on import (documented so failures are not surprising).
-_KNOWN_BROKEN = [
-    "Flange.Traditional.Appendix_2",   # circular import with Flange.common.Div1Common
-    "Flange.common.Div1Common",
-]
+_KNOWN_BROKEN: list[str] = []
 
 
 def _probe(name: str) -> tuple[bool, str]:
@@ -87,6 +90,8 @@ def smoke_test() -> int:
             failures += 1
 
     print("\nKnown-broken modules (expected to fail):")
+    if not _KNOWN_BROKEN:
+        print("  (none)")
     for name in _KNOWN_BROKEN:
         ok, err = _probe(name)
         status = "still-broken" if not ok else "NOW-WORKS?!"

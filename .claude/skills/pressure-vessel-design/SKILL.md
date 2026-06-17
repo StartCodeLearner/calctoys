@@ -86,7 +86,7 @@ the reference for the family you need:
 
 ## Import quirks (why scripts "don't work together")
 
-`scripts/pv_env.py setup()` handles cases 1–2; case 3 is genuinely broken.
+`scripts/pv_env.py setup()` handles cases 1–2; case 3 (Flange) is now fixed.
 
 1. **Package-relative modules** (Cylinder, Noncircular, Saddles,
    CombinedLoading, and `Tubesheet/UHX/UHX_12.py`): import as a dotted package
@@ -98,10 +98,10 @@ the reference for the family you need:
    bare name: `import UHX_13`. **Do not mix** bare-imported UHX modules with
    the package-imported `UHX_12` in one session — `_UHX_common` then loads
    twice as two distinct modules and enum identity comparisons silently fail.
-3. **Flange package is broken on import** — `Flange.Traditional.Appendix_2`
-   and `Flange.common.Div1Common` have a circular import. You can still read
-   the formulas and copy individual functions, but they will not import
-   as-is. See `references/flanges.md`.
+3. **Flange package now imports cleanly** (the old `Div1Common` ↔ `Appendix_2`
+   circular import and several formula bugs were fixed). The App. 2 calc is
+   still marked incomplete and is unvalidated against a known case — usable,
+   but verify numbers. See `references/flanges.md`.
 
 ## Scripts
 
@@ -109,3 +109,5 @@ the reference for the family you need:
   test (the ground-truth import table). Import it from any analysis script.
 - `scripts/example_cylinder.py` — runnable worked example (Div 1 UG-27 +
   Div 2 4.3.3). The template for new calc scripts.
+- `scripts/example_flange.py` — runnable App. 2 weld-neck flange example;
+  doubles as the Flange-package regression check.

@@ -84,7 +84,7 @@ class Appendix2FlangeCalcs:
     def C_b(self):
         if self.units == Units.Imperial:
             return 0.5
-        elif self.units == Units.Metric:
+        elif self.units in (Units.MKS, Units.SI):
             return 2.5
         else:
             raise ValueError("Improper value %r for property 'units'" % self.units)
@@ -116,7 +116,8 @@ class Appendix2FlangeCalcs:
     def B_1(self):
         if self.attachment_sketch in loose_flanges or self.f_actual < 1:
             return self.B + self.hub.g_1
-        elif (self.attachment_sketch in integral_flanges or optional_flanges) and (self.f_actual >= 1):
+        elif (self.attachment_sketch in integral_flanges or
+              self.attachment_sketch in optional_flanges) and (self.f_actual >= 1):
             return self.B + self.hub.g_1
         else:
             raise ValueError("Invalid value %r for property 'attachment sketch'" % self.attachment_sketch)
@@ -341,7 +342,8 @@ class Appendix2FlangeCalcs:
         Total moment in the seating condition
         :return:
         """
-        return self.W_seating * 0.5 * (self.C * self.G)
+        # M_o = W * h_G, with the seating-condition lever arm h_G = (C - G)/2.
+        return self.W_seating * 0.5 * (self.C - self.G)
 
     @property
     def M_o_operating(self):
@@ -424,7 +426,7 @@ class Appendix2FlangeCalcs:
         elif self.attachment_sketch in loose_flanges or \
                         self.attachment_sketch in optional_flanges:
 
-            if self.attachment_sketch in [Table_2_5_2_Sketch.sketch_1, Table_2_5_2_Sketch.sketch_1a]:
+            if self.attachment_sketch in [Figure2_4.sketch_1, Figure2_4.sketch_1a]:
                 return 0.5 * (self.C - self.G)
             else:
                 return 0.5 * (self.h_D + self.h_G)
@@ -574,7 +576,7 @@ class Appendix2FlangeCalcs:
         :return:
         """
         if self.hub is not None:
-            return self.f * self.M_o_seating / self.L * (self.hub.g_1 ** 2) * self.B
+            return self.f * self.M_o_seating / (self.L * (self.hub.g_1 ** 2) * self.B)
         else:
             return 0
 
@@ -585,7 +587,7 @@ class Appendix2FlangeCalcs:
         :return:
         """
         if self.hub is not None:
-            return self.f * self.M_o_operating / self.L * (self.hub.g_1 ** 2) * self.B
+            return self.f * self.M_o_operating / (self.L * (self.hub.g_1 ** 2) * self.B)
         else:
             return 0
 
@@ -715,7 +717,9 @@ class Table_2_7_1:
             self.g_o = self.parent.hub.g_o
             self.g_1 = self.parent.hub.g_1
             self.h = self.parent.hub.h
-            self.h_o = self.parent.hub.h_o
+            # h_o = sqrt(B * g_o) is a flange-level quantity (App. 2 nomenclature),
+            # exposed by the parent calc, not a HubGeometry input.
+            self.h_o = self.parent.h_o
 
         if not (self.g_o and self.g_1 and self.h and self.h_o):
             raise ValueError("Invalid values passed to table 2-7.1 class.")
