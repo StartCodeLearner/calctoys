@@ -6,11 +6,14 @@ import math
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    # Imported only for type checking to avoid a circular import:
+    # Appendix_2 imports tables/enums from this module at runtime, and this
+    # module only needs Appendix2FlangeCalcs as an annotation.
     from Flange.Traditional.Appendix_2 import Appendix2FlangeCalcs
 
 
 class Table_2_7_1:
-    def __init__(self, parent: Optional[Appendix2FlangeCalcs]=None, g_o=None, g_1=None, h=None, h_o=None):
+    def __init__(self, parent: "Optional[Appendix2FlangeCalcs]"=None, g_o=None, g_1=None, h=None, h_o=None):
         self.parent = parent
         if self.parent is None:
             self.g_o = g_o
@@ -21,7 +24,9 @@ class Table_2_7_1:
             self.g_o = self.parent.hub.g_o
             self.g_1 = self.parent.hub.g_1
             self.h = self.parent.hub.h
-            self.h_o = self.parent.hub.h_o
+            # h_o = sqrt(B * g_o) is a flange-level quantity (App. 2 nomenclature),
+            # exposed by the parent calc, not a HubGeometry input.
+            self.h_o = self.parent.h_o
 
         if not (self.g_o and self.g_1 and self.h and self.h_o):
             raise ValueError("Invalid values passed to table 2-7.1 class.")
@@ -461,7 +466,7 @@ class Table_2_6:
             return 0.5 * (self.R + self.g_1 + self.h_G)
         elif self.attachment_sketch in loose_flanges or self.attachment_sketch in optional_flanges:
 
-            if self.attachment_sketch in [Table_2_5_2_Sketch.sketch_1, Table_2_5_2_Sketch.sketch_1a]:
+            if self.attachment_sketch in [Figure2_4.sketch_1, Figure2_4.sketch_1a]:
                 return 0.5 * (self.C - self.G)
             else:
                 return 0.5 * (self.h_D + self.h_G)
