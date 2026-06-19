@@ -20,6 +20,23 @@ the Code's variable names and equation numbers in comments, and — as the
 README warns — **do not all import the same way, and some do not import at
 all.** This skill is the map and the harness that make them usable.
 
+## Quick start
+
+One command drives everything — no need to remember paths or import quirks
+(`scripts/pv.py`, runnable from any directory):
+
+```
+python scripts/pv.py            # help
+python scripts/pv.py check      # which modules import (smoke test)
+python scripts/pv.py list       # list runnable worked examples
+python scripts/pv.py run heads  # run one (cylinder | heads | flange | noncircular)
+python scripts/pv.py test       # validation + regression suite
+```
+
+The `run <example>` files double as copy-me templates for the standard pattern:
+`units` (convert/validate inputs) → call the calc module → `report` (audit
+sheet). For a calc the examples don't cover, follow the Workflow below.
+
 ## Golden rules
 
 1. **Never hand-derive a Code formula you can call.** Find the module for the
@@ -80,7 +97,8 @@ all.** This skill is the map and the harness that make them usable.
 | U-tube & fixed tubesheets | `Tubesheet/UHX/UHX_11.py`, `UHX_12.py`, `UHX_13.py` | VIII Part UHX |
 | Tubesheet flanged extension | `Tubesheet/DIV2/FlangedExtension.py` | VIII-2 4.18 |
 | TEMA tubesheet | `Tubesheet/TEMA/Calculations/RGP.py` | TEMA |
-| Noncircular (rectangular) shells | `Noncircular/Calculations/_Appendix13_*.py` | VIII-1 App. 13 |
+| Noncircular cross-section vessels (design check) | `Noncircular/Calculations/Appendix13.py` | VIII-1 App. 13-7(a) + 13-4 |
+| Noncircular stress calcs (rectangular variants, ligaments) | `Noncircular/Calculations/_Appendix13_*.py` | VIII-1 App. 13 |
 | Saddle supports (horizontal vessel) | `Saddles/Calculations/SaddleCalcsDiv2.py` | VIII-2 4.15 / Zick |
 | Combined load aggregation (wind/platform) | `CombinedLoading/LoadingModel.py` | load model input to 4.3.10/4.4.12 |
 
@@ -117,6 +135,8 @@ the reference for the family you need:
 ## Scripts
 
 Harness:
+- `scripts/pv.py` — **one-command CLI** (`check` / `list` / `run` / `test` /
+  `index`). The easiest way in; see Quick start above.
 - `scripts/pv_env.py` — `setup()` path bootstrap + `python pv_env.py` smoke
   test (the ground-truth import table). Import it from any analysis script.
 - `scripts/units.py` — unit conversion (`to_in`, `to_psi`, `to_lbf`,
@@ -132,17 +152,23 @@ Worked examples (copy-me templates, each runnable):
   pipeline.
 - `scripts/example_flange.py` — App. 2 weld-neck flange; also the Flange
   regression check.
+- `scripts/example_noncircular.py` — App. 13-7(a) rectangular vessel design
+  check (stresses + 13-4 acceptance).
 
 ## Coverage & roadmap
 
 Implemented and **validated** (tests.py): UG-27 cylinders, UG-32 formed
-heads/cones (internal P), VIII-2 4.3.3 shells. Present but **unvalidated**:
-VIII-2 4.4 external/combined, App. 2 flange (incomplete), UHX tubesheets,
-App. 13 noncircular, saddles, combined-load model — usable, verify numbers.
+heads/cones (internal P), VIII-2 4.3.3 shells, App. 13-7(a) unreinforced
+rectangular noncircular vessels (stresses + 13-4 acceptance). Present but
+**unvalidated**: VIII-2 4.4 external/combined, App. 2 flange (incomplete),
+UHX tubesheets, App. 13 stress modules beyond 13-7(a), saddles, combined-load
+model — usable, verify numbers.
 
 Known gaps (not yet implemented — say so rather than improvising): formed heads
 under **external** pressure (UG-33), **nozzle/opening reinforcement**
-(UG-37/UG-40, area-replacement), and the App. 2 flange TODOs (external
-pressure, reverse/split flanges, allowable-stress checks, nut stops, material
-checks). Implement these only with a verified ASME test case added to
-`tests.py` — wrong vessel math is a safety issue.
+(UG-37/UG-40, area-replacement), App. 13 design facade for the reinforced/
+rounded-corner/obround cases (`_7_b`/`_7_c`/`_8_e`/`_9_b` — stresses exist,
+wrap them with acceptance like `Appendix13.py` does for 13-7(a)), and the
+App. 2 flange TODOs (external pressure, reverse/split flanges, allowable-stress
+checks, nut stops, material checks). Implement these only with a verified ASME
+test case added to `tests.py` — wrong vessel math is a safety issue.

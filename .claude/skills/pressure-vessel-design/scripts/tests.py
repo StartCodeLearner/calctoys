@@ -26,6 +26,8 @@ setup()
 from Cylinder.Calculations.Div1 import internal_pressure as ug27  # noqa: E402
 from Cylinder.Calculations.Div1 import UG32_heads as heads  # noqa: E402
 from Cylinder.Calculations.Div2 import Div2Cylinder_internal as div2  # noqa: E402
+from Noncircular.Calculations.Appendix13 import (  # noqa: E402
+    design_rectangular_unreinforced)
 
 TOL = 1e-6
 
@@ -115,6 +117,52 @@ class TestUG32Heads(unittest.TestCase):
             t = heads.required_thickness(P=self.P, S=self.S, E=self.E, **kw)
             self.assertAlmostEqual(pfun(t), self.P, delta=1e-3,
                                    msg=f"round-trip failed for {kw}")
+
+
+class TestNoncircularAppendix13(unittest.TestCase):
+    """REFERENCE (membrane, hand-computed) + CHARACTERIZATION (bending/total)
+    for VIII-1 Appendix 13-7(a): unreinforced rectangular vessel,
+    h=9.5, H=7.375, P=400, t_1=t_2=0.875, S=20000, E=1."""
+
+    def setUp(self):
+        self.r = design_rectangular_unreinforced(
+            P=400, S=20000, E=1.0,
+            long_side_inside=9.5, short_side_inside=7.375,
+            short_side_thickness=0.875, long_side_thickness=0.875)
+
+    def test_membrane_hand_computed(self):
+        gm = self.r.governing_membrane
+        # SmShort = P h /(2 t_1) = 400*9.5/1.75 = 2171.4286 governs
+        self.assertAlmostEqual(gm.membrane, 400 * 9.5 / (2 * 0.875), delta=1e-3)
+
+    def test_allowables(self):
+        self.assertEqual(self.r.membrane_allowable, 20000.0)   # 1.0 * S * E
+        self.assertEqual(self.r.total_allowable, 30000.0)      # 1.5 * S * E
+
+    def test_governing_total_location_and_value(self):
+        gt = self.r.governing_total
+        self.assertEqual((gt.label, gt.wall), ("Q_short", "inner"))
+        self.assertAlmostEqual(gt.total, 21653.06, delta=0.5)   # characterization
+
+    def test_acceptance_pass(self):
+        self.assertTrue(self.r.ok)
+        self.assertGreater(self.r.margin(), 0.0)
+
+    def test_acceptance_fail_when_thin(self):
+        thin = design_rectangular_unreinforced(
+            P=400, S=20000, E=1.0,
+            long_side_inside=9.5, short_side_inside=7.375,
+            short_side_thickness=0.25, long_side_thickness=0.25)
+        self.assertFalse(thin.ok)
+        self.assertLess(thin.margin(), 0.0)
+
+    def test_custom_acceptance_factors(self):
+        r = design_rectangular_unreinforced(
+            P=400, S=20000, E=0.85,
+            long_side_inside=9.5, short_side_inside=7.375,
+            short_side_thickness=0.875, long_side_thickness=0.875,
+            membrane_factor=1.0, bending_factor=1.5)
+        self.assertAlmostEqual(r.total_allowable, 1.5 * 20000 * 0.85, delta=1e-6)
 
 
 class TestUnits(unittest.TestCase):
