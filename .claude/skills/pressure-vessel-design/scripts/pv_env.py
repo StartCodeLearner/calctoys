@@ -1,20 +1,14 @@
 """Import bootstrap and smoke test for the calctoys ASME pressure-vessel modules.
 
-The calctoys source tree mixes three incompatible import styles (see the
-README's warning that "most of these scripts do not work together"):
+All calctoys modules now use package-relative imports under ``src`` (Cylinder,
+Noncircular, Saddles, CombinedLoading, Tubesheet/UHX, Flange). ``setup()`` puts
+``src`` on ``sys.path`` so every module imports the same way, by its dotted
+package path, no matter the current working directory.
 
-  1. Package-relative imports under ``src`` (Cylinder, Noncircular, Saddles,
-     CombinedLoading) -- work once ``src`` is on ``sys.path``.
-  2. Bare top-level imports inside ``src/Tubesheet/UHX`` (e.g.
-     ``from Table_13_1_and_2 import ...``) -- need the UHX directory itself on
-     ``sys.path``.
-  3. Circular imports in the Flange package (Div1Common <-> Appendix_2) that
-     fail on import regardless of path.
-
-``setup()`` puts (1) and (2) on the path so the working modules import the same
-way every time, no matter the current working directory. Run this file directly
-to print a status table of what imports cleanly -- that table is the ground
-truth; trust it over comments in the code.
+(History: the UHX modules once used bare top-level imports and the Flange
+package had a circular import; both are fixed, so the old per-module
+special-casing is gone.) Run this file directly to print a status table of what
+imports cleanly -- that table is the ground truth; trust it over code comments.
 
 Usage:
     from pv_env import setup, SRC
@@ -33,14 +27,12 @@ import sys
 # scripts/ -> pressure-vessel-design/ -> skills/ -> .claude/ -> repo root
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), *[os.pardir] * 4))
 SRC = os.path.join(_REPO_ROOT, "src")
-_UHX = os.path.join(SRC, "Tubesheet", "UHX")
 
 
 def setup() -> str:
-    """Put the calctoys source roots on sys.path. Idempotent. Returns SRC."""
-    for path in (SRC, _UHX):
-        if path not in sys.path:
-            sys.path.insert(0, path)
+    """Put the calctoys src root on sys.path. Idempotent. Returns SRC."""
+    if SRC not in sys.path:
+        sys.path.insert(0, SRC)
     return SRC
 
 
@@ -52,12 +44,15 @@ _KNOWN_GOOD = [
     "Cylinder.Calculations.Div2.Div2Hemispherical",
     "Cylinder.Calculations.Div2.Div2Part4_4_general",
     "Cylinder.Calculations.Div2.Div2Annex3_D",
+    "Noncircular.Calculations.Appendix13",       # design facade (acceptance check)
     "Noncircular.Calculations._Appendix13_6",
     "Saddles.Calculations.SaddleCalcsDiv2",
     "CombinedLoading.LoadingModel",
-    "UHX_13",            # bare imports -> import as top-level module name
-    "UHX_11",            # bare imports -> import as top-level module name
-    "Tubesheet.UHX.UHX_12",  # relative imports -> import via package path
+    # UHX modules now use package-relative imports consistently -- import via
+    # the dotted package path (no more bare-import special case).
+    "Tubesheet.UHX.UHX_11",
+    "Tubesheet.UHX.UHX_12",
+    "Tubesheet.UHX.UHX_13",
     # Flange package -- the Div1Common <-> Appendix_2 circular import is fixed.
     "Flange.common.Div1Common",
     "Flange.Traditional.Appendix_2",

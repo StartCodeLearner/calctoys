@@ -43,10 +43,10 @@ sheet). For a calc the examples don't cover, follow the Workflow below.
    component + Code + Division, call it, report the labelled result. The
    modules encode equation numbers and edge cases you will otherwise get wrong.
 2. **Bootstrap the path; do not guess imports.** Always start with
-   `scripts/pv_env.py` `setup()` (or run scripts from `scripts/`). It puts both
-   `src/` and `src/Tubesheet/UHX/` on `sys.path`, which is the only
-   configuration where the working modules all import. See "Import quirks".
-3. **Run the smoke test when unsure what works:** `python scripts/pv_env.py`
+   `scripts/pv_env.py` `setup()` (or run scripts from `scripts/`). It puts
+   `src/` on `sys.path`; every module then imports by its dotted package path.
+   See "Imports".
+3. **Run the smoke test when unsure what works:** `python scripts/pv.py check`
    prints a live OK/FAIL table. Trust that table over code comments.
 4. **Units are US customary throughout** unless a module says otherwise:
    length **in**, pressure/stress **psi**, force **lbf**, moment **in·lbf**,
@@ -108,29 +108,25 @@ the reference for the family you need:
 - `references/cylinders-and-heads.md` — shells & heads, Div 1 and Div 2,
   internal/external/combined; UG-32 heads; the `material_type` enum.
 - `references/flanges.md` — Appendix 2/24/Y; fixed bugs + remaining gaps.
-- `references/tubesheets.md` — UHX 11/12/13; **per-module import styles**.
+- `references/tubesheets.md` — UHX 11/12/13, TEMA, Div 2 flanged extension.
 - `references/noncircular-saddles-combined.md` — App. 13, saddles, load model.
 - `references/module-index.generated.md` — full auto-generated map of every
   module's public symbols (regenerate with `scripts/index_modules.py --write`).
 
-## Import quirks (why scripts "don't work together")
+## Imports
 
-`scripts/pv_env.py setup()` handles cases 1–2; case 3 (Flange) is now fixed.
+`scripts/pv_env.py setup()` puts `src/` on `sys.path`; **every** calctoys
+module then imports by its dotted package path, e.g.
+`from Cylinder.Calculations.Div1 import internal_pressure` or
+`import Tubesheet.UHX.UHX_13`. Run `python scripts/pv.py check` for the live
+import table.
 
-1. **Package-relative modules** (Cylinder, Noncircular, Saddles,
-   CombinedLoading, and `Tubesheet/UHX/UHX_12.py`): import as a dotted package
-   path with `src/` on `sys.path`, e.g.
-   `from Cylinder.Calculations.Div1 import internal_pressure`.
-2. **Bare-import modules** (`Tubesheet/UHX/UHX_11.py`, `UHX_13.py`): use
-   top-level imports like `from Table_13_1_and_2 import ...`, so they only
-   resolve with `src/Tubesheet/UHX/` itself on `sys.path` and are imported by
-   bare name: `import UHX_13`. **Do not mix** bare-imported UHX modules with
-   the package-imported `UHX_12` in one session — `_UHX_common` then loads
-   twice as two distinct modules and enum identity comparisons silently fail.
-3. **Flange package now imports cleanly** (the old `Div1Common` ↔ `Appendix_2`
-   circular import and several formula bugs were fixed). The App. 2 calc is
-   still marked incomplete and is unvalidated against a known case — usable,
-   but verify numbers. See `references/flanges.md`.
+The repo's old "scripts don't work together" hazards are fixed: the Flange
+circular import (`Div1Common` ↔ `Appendix_2`) and the UHX bare-vs-relative
+import split are both resolved. (The App. 2 flange calc still imports but is
+incomplete and unvalidated — see `references/flanges.md`.) If a module ever
+fails to import, the smoke test reports it under known-broken rather than
+silently breaking a calc.
 
 ## Scripts
 

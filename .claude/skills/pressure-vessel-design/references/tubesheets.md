@@ -2,24 +2,23 @@
 
 All paths relative to `src/`. Units: in / psi / lbf / in·lbf.
 
-## ⚠️ Import styles differ per UHX module — do not mix in one session
+## Imports — consistent package-relative style
 
-`scripts/pv_env.py setup()` puts **both** `src/` and `src/Tubesheet/UHX/` on
-`sys.path` so all three import, but they use incompatible styles:
+All UHX modules now use package-relative imports, so they import the same way
+as the rest of `src/` — by dotted package path, with `scripts/pv_env.py
+setup()` on the path:
 
-| Module | Import style in source | How to import |
-|---|---|---|
-| `UHX_11.py` | bare: `from _UHX_common import ...` | `import UHX_11` (top-level) |
-| `UHX_13.py` | bare: `from Table_13_1_and_2 import ...`, `from _UHX_common import ...` | `import UHX_13` (top-level) |
-| `UHX_12.py` | relative: `from ._UHX_common import ...` | `import Tubesheet.UHX.UHX_12` (package) |
+```python
+from pv_env import setup; setup()
+import Tubesheet.UHX.UHX_11 as uhx11
+import Tubesheet.UHX.UHX_12 as uhx12
+import Tubesheet.UHX.UHX_13 as uhx13
+```
 
-**Hazard:** bare-importing `UHX_11`/`UHX_13` loads `_UHX_common` as top-level
-module `_UHX_common`; package-importing `UHX_12` loads it again as
-`Tubesheet.UHX._UHX_common`. The `Configuration`/`AttachmentType` enums then
-exist as two unequal classes, so any `==` comparison or `isinstance` check that
-crosses the boundary silently fails. **In one analysis, work entirely in one
-style** — for a UHX-13 fixed-tubesheet calc use the bare-import world
-(`UHX_11` + `UHX_13`), and don't also package-import `UHX_12`.
+(Historical note: UHX_11/UHX_13 once used bare top-level imports while UHX_12
+used relative ones, which loaded `_UHX_common` twice and made the
+`Configuration`/`AttachmentType` enums compare unequal across modules. That is
+fixed — import all three by package path and the shared enums are identical.)
 
 ## VIII Part UHX — shell-and-tube tubesheets
 
