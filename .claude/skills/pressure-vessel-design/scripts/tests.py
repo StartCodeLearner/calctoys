@@ -27,7 +27,7 @@ from Cylinder.Calculations.Div1 import internal_pressure as ug27  # noqa: E402
 from Cylinder.Calculations.Div1 import UG32_heads as heads  # noqa: E402
 from Cylinder.Calculations.Div2 import Div2Cylinder_internal as div2  # noqa: E402
 from Noncircular.Calculations.Appendix13 import (  # noqa: E402
-    design_rectangular_unreinforced)
+    design_rectangular_unreinforced, design_rectangular_stayed)
 
 TOL = 1e-6
 
@@ -163,6 +163,45 @@ class TestNoncircularAppendix13(unittest.TestCase):
             short_side_thickness=0.875, long_side_thickness=0.875,
             membrane_factor=1.0, bending_factor=1.5)
         self.assertAlmostEqual(r.total_allowable, 1.5 * 20000 * 0.85, delta=1e-6)
+
+
+class TestNoncircularStayed(unittest.TestCase):
+    """REFERENCE (hand-computed from the 13-9(b) equations) for a stay-plate
+    rectangular vessel: h=5, H=5, P=100, t_1=1, t_2=2, t_3=0.5, S=20000, E=1.
+    With alpha=1, K=8: S_m,short=250, S_m,long=125, S_m,stay=1000,
+    S_b_N=-625, S_b_Q_short=1250 -> S_T_N=-375, S_T_Q_short=1500."""
+
+    def setUp(self):
+        self.r = design_rectangular_stayed(
+            P=100, S=20000, E=1.0,
+            stay_pitch=5, short_side_inside=5,
+            short_side_thickness=1, long_side_thickness=2,
+            stay_plate_thickness=0.5)
+
+    def _point(self, label, wall="inner"):
+        return next(p for p in self.r.points if p.label == label and p.wall == wall)
+
+    def test_membrane_values(self):
+        self.assertAlmostEqual(self._point("Q_short").membrane, 250.0, delta=1e-6)
+        self.assertAlmostEqual(self._point("M").membrane, 125.0, delta=1e-6)   # P H /(2 t_2)
+        self.assertAlmostEqual(self._point("stay").membrane, 1000.0, delta=1e-6)
+
+    def test_total_short_midpoint_uses_short_bending(self):
+        # Regression for the S_T_N copy-paste bug (was SmShort + S_b_M = 562.5).
+        self.assertAlmostEqual(self._point("N").total, -375.0, delta=1e-6)
+
+    def test_total_corner(self):
+        self.assertAlmostEqual(self._point("Q_short").total, 1500.0, delta=1e-6)
+
+    def test_stay_is_membrane_only(self):
+        sp = self._point("stay")
+        self.assertEqual(sp.bending, 0.0)
+        self.assertEqual(sp.total, sp.membrane)
+
+    def test_governing_membrane_is_stay(self):
+        gm = self.r.governing_membrane
+        self.assertEqual(gm.label, "stay")
+        self.assertTrue(self.r.ok)
 
 
 class TestUnits(unittest.TestCase):

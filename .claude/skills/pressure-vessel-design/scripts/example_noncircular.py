@@ -10,9 +10,10 @@ from pv_env import setup
 
 setup()
 
-from units import to_psi, sanity_check  # noqa: E402
+from units import sanity_check  # noqa: E402
 from report import CalcReport  # noqa: E402
-from Noncircular.Calculations.Appendix13 import design_rectangular_unreinforced  # noqa: E402
+from Noncircular.Calculations.Appendix13 import (  # noqa: E402
+    design_rectangular_unreinforced, design_rectangular_stayed)
 
 
 def main() -> None:
@@ -54,6 +55,20 @@ def main() -> None:
     rpt.note("Acceptance factors 1.0 / 1.5 per Appendix 13-4(b); pass E as the "
              "lower of joint and ligament efficiency.")
     print(rpt.render())
+
+    # --- Stayed variant (13-9(b)): a stay plate adds a membrane-only check ---
+    s = design_rectangular_stayed(
+        P=100.0, S=20000.0, E=1.0,
+        stay_pitch=5.0, short_side_inside=5.0,
+        short_side_thickness=1.0, long_side_thickness=2.0,
+        stay_plate_thickness=0.5)
+    gm, gt = s.governing_membrane, s.governing_total
+    print("\n" + "-" * 60)
+    print(f"Stayed variant ({s.paragraph}): "
+          f"governing membrane {gm.membrane:.0f} psi at {gm.label}, "
+          f"governing total {gt.total:.0f} psi at {gt.label} -> "
+          f"{'ACCEPTABLE' if s.ok else 'NOT ACCEPTABLE'} "
+          f"(margin {s.margin() * 100:.1f}%)")
 
 
 if __name__ == "__main__":

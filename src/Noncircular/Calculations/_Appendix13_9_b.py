@@ -145,7 +145,7 @@ class Appendix13_9_bCalcs:
 
         :return: Short side plate total stress at midpoint for Figure 13-2(a) Sketch 7 vessels; Appendix 13-9 equation 8
         """
-        return self.SmShort() + self.S_b_M()
+        return self.SmShort() + self.S_b_N()
 
     def S_T_Q_short(self):
         """

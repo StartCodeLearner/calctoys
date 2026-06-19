@@ -154,17 +154,19 @@ Worked examples (copy-me templates, each runnable):
 ## Coverage & roadmap
 
 Implemented and **validated** (tests.py): UG-27 cylinders, UG-32 formed
-heads/cones (internal P), VIII-2 4.3.3 shells, App. 13-7(a) unreinforced
-rectangular noncircular vessels (stresses + 13-4 acceptance). Present but
+heads/cones (internal P), VIII-2 4.3.3 shells, App. 13-7(a) unreinforced and
+13-9(b) stay-plate rectangular noncircular vessels (stresses + 13-4
+acceptance). Present but
 **unvalidated**: VIII-2 4.4 external/combined, App. 2 flange (incomplete),
 UHX tubesheets, App. 13 stress modules beyond 13-7(a), saddles, combined-load
 model — usable, verify numbers.
 
 Known gaps (not yet implemented — say so rather than improvising): formed heads
 under **external** pressure (UG-33), **nozzle/opening reinforcement**
-(UG-37/UG-40, area-replacement), App. 13 design facade for the reinforced/
-rounded-corner/obround cases (`_7_b`/`_7_c`/`_8_e`/`_9_b` — stresses exist,
-wrap them with acceptance like `Appendix13.py` does for 13-7(a)), and the
+(UG-37/UG-40, area-replacement), App. 13 facade for the two-thickness and
+rounded-corner cases (`_7_b`/`_7_c` — `_7_c` is blocked by an unimplemented
+`M_r` and a suspect `S_b_D` term, see references/noncircular-saddles-combined.md),
+and the
 App. 2 flange TODOs (external pressure, reverse/split flanges, allowable-stress
 checks, nut stops, material checks). Implement these only with a verified ASME
 test case added to `tests.py` — wrong vessel math is a safety issue.

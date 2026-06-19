@@ -12,22 +12,33 @@ except fields named `_degrees`. Bootstrap: `from pv_env import setup; setup()`.
 `Appendix13.py` is the **design entry point**: it runs the stress calc *and*
 applies the Appendix 13-4 acceptance criteria (the per-paragraph modules only
 compute stresses — their source carries "TODO: Implement acceptability tests").
-Validated by `scripts/tests.py`.
+Two cases are wrapped and validated by `scripts/tests.py`:
 
 ```python
-from Noncircular.Calculations.Appendix13 import design_rectangular_unreinforced
+from Noncircular.Calculations.Appendix13 import (
+    design_rectangular_unreinforced,   # 13-7(a), Fig. 13-2(a) sketch 1
+    design_rectangular_stayed)         # 13-9(b), Fig. 13-2(a) sketch 7
 
 r = design_rectangular_unreinforced(
     P=400, S=20000, E=1.0,            # pressure, allowable stress, efficiency
     long_side_inside=9.5, short_side_inside=7.375,
     short_side_thickness=0.875, long_side_thickness=0.875)
 
+s = design_rectangular_stayed(
+    P=100, S=20000, E=1.0,
+    stay_pitch=5, short_side_inside=5,         # h, H
+    short_side_thickness=1, long_side_thickness=2, stay_plate_thickness=0.5)
+
 r.ok                  # overall acceptable?  (membrane_ok and total_ok)
 r.governing_total     # StressPoint: label, wall, membrane, bending, total
-r.governing_membrane
+r.governing_membrane  # for the stayed case this is usually the stay plate
 r.margin()            # lowest remaining fraction of allowable (>=0 = pass)
 r.rows()              # full (label, desc, wall, S_m, S_b, S_T) table
 ```
+
+The stayed case adds a membrane-only `stay` location (S_b = 0, S_T = S_m). A
+copy-paste bug in `_Appendix13_9_b` (`S_T_N` added the long-side bending
+instead of the short-side bending) was fixed as part of wrapping it.
 
 Acceptance criteria (Appendix **13-4(b)**), US customary psi:
 - membrane: `S_m <= membrane_factor·S·E` (default factor 1.0)
@@ -60,10 +71,14 @@ Each `*Calcs` exposes `SmShort`/`SmLong` (membrane), `S_b_*` (bending) and
 `S_T_*` (total) at the controlling locations, plus `eval_at_outer_walls` to
 switch wall face. `_Appendix13Common.NonCircularVesselType` enumerates the
 Fig. 13-2 sketches. Modules `_8_f/_8_g/_8_h`, `_9_c/_9_d/_9_e`, `_10`–`_13`
-exist but are empty stubs. **Coverage gap:** only the unreinforced-rectangular
-case is wrapped in the facade with a validated acceptance test; extending the
-facade to `_7_b/_7_c/_8_e/_9_b` is straightforward future work (add each with a
-verified case to `tests.py`).
+exist but are empty stubs. **Coverage:** the facade wraps the unreinforced
+(`_7_a`) and stay-plate (`_9_b`) rectangular cases with hand-computed reference
+tests. Not yet wrapped: `_7_b` (two long-side thicknesses) and `_7_c`
+(rounded corners). `_7_c` is **blocked** — its `M_r` (eq. 39) raises
+`NotImplementedError`-style `ValueError`, and its `S_b_D` (eq. 29) has a
+duplicated `L_2**2` term that needs an authoritative App. 13 reference to
+confirm/fix before it can be trusted. Wrapping these is future work: add each
+with an independent ASME worked-example value to `tests.py` first.
 
 ## VIII-2 4.15 (Zick analysis) — saddle supports for horizontal vessels
 

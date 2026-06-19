@@ -25,7 +25,7 @@ Indexed 39 modules under `src/`.
 | `Flange/Traditional/Div2Flange.py` | `Units`, `GasketFacingSketch`, `GasketFacingSketchColumn`, `FlangeType`, `IntegralType`, `LooseType` … |  |
 | `Flange/common/Div1Common.py` | `Table_2_7_1`, `Units`, `FacingType`, `Table_2_5_2_Sketch`, `Figure2_4`, `Table_2_6` … |  |
 | `Flange/common/PCC_1.py` | `AppendixO` |  |
-| `Noncircular/Calculations/Appendix13.py` | `StressPoint`, `Appendix13Result`, `design_rectangular_unreinforced()` | ASME BPVC Section VIII, Division 1 -- Mandatory Appendix 13. |
+| `Noncircular/Calculations/Appendix13.py` | `StressPoint`, `Appendix13Result`, `design_rectangular_unreinforced()`, `design_rectangular_stayed()` | ASME BPVC Section VIII, Division 1 -- Mandatory Appendix 13. |
 | `Noncircular/Calculations/_Appendix13Common.py` | `NonCircularVesselType`, `SquareVesselCommon` |  |
 | `Noncircular/Calculations/_Appendix13_6.py` | `MultiDiameterHole` |  |
 | `Noncircular/Calculations/_Appendix13_7_a.py` | `Appendix13_7_aParams`, `Appendix13_7_aCalcs` | Un-reinforced vessels of rectangular cross section |

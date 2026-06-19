@@ -22,6 +22,7 @@ Units are US customary throughout: length in, pressure/stress psi.
 from dataclasses import dataclass, field
 
 from ._Appendix13_7_a import Appendix13_7_aParams, Appendix13_7_aCalcs
+from ._Appendix13_9_b import Appendix13_9_bParams, Appendix13_9_bCalcs
 
 
 @dataclass
@@ -85,6 +86,31 @@ _RECT_LOCATIONS = [
     ("Q_long", "corner, long side", "SmLong", "S_b_Q_long", "S_T_Q_long"),
 ]
 
+# Controlling locations for 13-9(b) -- same wall locations plus the stay plate,
+# which carries membrane only (S_b = 0, S_T = S_m).
+_STAYED_LOCATIONS = [
+    ("N", "midspan, short side", "SmShort", "S_b_N", "S_T_N"),
+    ("Q_short", "corner, short side", "SmShort", "S_b_Q_short", "S_T_Q_short"),
+    ("M", "midspan, long side", "SmLong", "S_b_M", "S_T_M"),
+    ("Q_long", "corner, long side", "SmLong", "S_b_Q_long", "S_T_Q_long"),
+    ("stay", "stay plate (membrane only)", "SmStay", None, "S_T_stay"),
+]
+
+
+def _collect_points(make_calc, locations):
+    """Build the StressPoint list for both wall faces from a calc factory."""
+    points = []
+    for wall, outer in (("inner", False), ("outer", True)):
+        calc = make_calc(outer)
+        for label, desc, m_attr, b_attr, t_attr in locations:
+            points.append(StressPoint(
+                label=label, description=desc, wall=wall,
+                membrane=getattr(calc, m_attr)(),
+                bending=0.0 if b_attr is None else getattr(calc, b_attr)(),
+                total=getattr(calc, t_attr)(),
+            ))
+    return points
+
 
 def design_rectangular_unreinforced(
         P, S, E,
@@ -104,9 +130,8 @@ def design_rectangular_unreinforced(
         long_side_inside, short_side_inside   inside lengths h, H
         short_side_thickness, long_side_thickness   t_1, t_2
     """
-    points = []
-    for wall, outer in (("inner", False), ("outer", True)):
-        params = Appendix13_7_aParams(
+    def make_calc(outer):
+        return Appendix13_7_aCalcs(Appendix13_7_aParams(
             long_side_length_inside=long_side_inside,
             short_side_length_inside=short_side_inside,
             internal_pressure=P,
@@ -115,22 +140,54 @@ def design_rectangular_unreinforced(
             allowable_stress=S,
             joint_efficiency=E,
             eval_at_outer_walls=outer,
-        )
-        calc = Appendix13_7_aCalcs(params)
-        for label, desc, m_attr, b_attr, t_attr in _RECT_LOCATIONS:
-            points.append(StressPoint(
-                label=label, description=desc, wall=wall,
-                membrane=getattr(calc, m_attr)(),
-                bending=getattr(calc, b_attr)(),
-                total=getattr(calc, t_attr)(),
-            ))
+        ))
 
     return Appendix13Result(
         paragraph="VIII-1 Appendix 13-7(a)",
         S=S, E=E,
         membrane_allowable=membrane_factor * S * E,
         total_allowable=bending_factor * S * E,
-        points=points,
+        points=_collect_points(make_calc, _RECT_LOCATIONS),
+    )
+
+
+def design_rectangular_stayed(
+        P, S, E,
+        stay_pitch, short_side_inside,
+        short_side_thickness, long_side_thickness, stay_plate_thickness,
+        *, membrane_factor=1.0, bending_factor=1.5):
+    """Design check for a staybolted/stay-plate rectangular vessel under
+    internal pressure (Appendix 13-9(b), Fig. 13-2(a) sketch 7).
+
+    Same 13-4(b) acceptance criteria as the unreinforced case, with the stay
+    plate added as a membrane-only location.
+
+    Args (US customary, in / psi):
+        P  internal pressure
+        S  allowable stress
+        E  efficiency (lower of joint / ligament efficiency)
+        stay_pitch          distance from short side to the stay plate (h)
+        short_side_inside   short side inside length (H)
+        short_side_thickness, long_side_thickness, stay_plate_thickness
+                            t_1, t_2, t_3
+    """
+    def make_calc(outer):
+        return Appendix13_9_bCalcs(Appendix13_9_bParams(
+            dist_from_short_side_to_stay_plate=stay_pitch,
+            short_side_length=short_side_inside,
+            internal_pressure=P,
+            short_side_thickness=short_side_thickness,
+            long_side_thickness=long_side_thickness,
+            stay_plate_thickness=stay_plate_thickness,
+            eval_at_outer_walls=outer,
+        ))
+
+    return Appendix13Result(
+        paragraph="VIII-1 Appendix 13-9(b)",
+        S=S, E=E,
+        membrane_allowable=membrane_factor * S * E,
+        total_allowable=bending_factor * S * E,
+        points=_collect_points(make_calc, _STAYED_LOCATIONS),
     )
 
 
